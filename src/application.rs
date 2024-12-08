@@ -57,7 +57,6 @@ mod imp {
                 return;
             }
 
-            println!("UPDATING");
             doc.update_text(&self.root, text).unwrap();
 
             {
@@ -135,11 +134,11 @@ mod imp {
                         while let Some(bytes) = rx.recv().await {
                             println!("got {:?}", bytes);
                             let text = {
-                                let mut doc_remote = AutoCommit::load(&bytes).unwrap();
-                                println!("REMOTE:");
-                                print_document(&doc_remote);
+                                // let mut doc_remote = AutoCommit::load(&bytes).unwrap();
+                                // println!("REMOTE:");
+                                // print_document(&doc_remote);
                                 let mut doc_local = app.imp().automerge.borrow_mut();
-                                doc_local.merge(&mut doc_remote).unwrap();
+                                doc_local.load_incremental(&bytes);
                                 println!("LOCAL:");
                                 print_document(&*doc_local);
                                 doc_local.text(&app.imp().root).unwrap()
