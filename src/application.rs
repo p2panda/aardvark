@@ -138,7 +138,7 @@ mod imp {
                                 // println!("REMOTE:");
                                 // print_document(&doc_remote);
                                 let mut doc_local = app.imp().automerge.borrow_mut();
-                                doc_local.load_incremental(&bytes);
+                                doc_local.load_incremental(&bytes).unwrap();
                                 println!("LOCAL:");
                                 print_document(&*doc_local);
                                 doc_local.text(&app.imp().root).unwrap()
