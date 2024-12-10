@@ -25,11 +25,14 @@ mod operation;
 mod textbuffer;
 mod window;
 
+use std::path::PathBuf;
+use std::env;
 use self::application::AardvarkApplication;
 use self::textbuffer::AardvarkTextBuffer;
 use self::window::AardvarkWindow;
 
-use config::{GETTEXT_PACKAGE, LOCALEDIR, PKGDATADIR};
+
+use config::{GETTEXT_PACKAGE, LOCALEDIR};
 use gettextrs::{bind_textdomain_codeset, bindtextdomain, textdomain};
 use gtk::prelude::*;
 use gtk::{gio, glib};
@@ -42,7 +45,7 @@ fn main() -> glib::ExitCode {
     textdomain(GETTEXT_PACKAGE).expect("Unable to switch to the text domain");
 
     // Load resources
-    let resources = gio::Resource::load(PKGDATADIR.to_owned() + "/aardvark.gresource")
+    let resources = gio::Resource::load(get_pkgdatadir().join("aardvark.gresource"))
         .expect("Could not load resources");
     gio::resources_register(&resources);
 
@@ -56,4 +59,22 @@ fn main() -> glib::ExitCode {
     // is the code you see when you do `echo $?` after running a command in a
     // terminal.
     app.run()
+}
+
+fn get_pkgdatadir() -> PathBuf {
+    #[cfg(target_os = "macos")]
+    {
+        let exe_path = env::current_exe().expect("Failed to get current executable path");
+        // Navigate to the 'Resources/share/aardvark' directory relative to the executable
+        exe_path
+            .parent()       // Goes up to 'Contents/MacOS'
+            .and_then(|p| p.parent()) // Goes up to 'Contents'
+            .map(|p| p.join("Resources/share/aardvark"))
+            .expect("Failed to compute PKGDATADIR")
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        PathBuf::from("/app/share/aardvark")
+    }
 }
