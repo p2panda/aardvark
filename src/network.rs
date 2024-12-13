@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock, RwLockWriteGuard};
 
 use anyhow::Result;
 use async_trait::async_trait;
+use iroh_gossip::proto::topic::Config as GossipConfig;
 use p2panda_core::{Extension, Hash, PrivateKey, PruneFlag, PublicKey};
 use p2panda_discovery::mdns::LocalDiscovery;
 use p2panda_net::{FromNetwork, NetworkBuilder, SyncConfiguration};
@@ -114,6 +115,10 @@ pub fn run() -> Result<(
             let network = NetworkBuilder::new(network_id.into())
                 .private_key(private_key.clone())
                 .discovery(LocalDiscovery::new().expect("local discovery service"))
+                .gossip(GossipConfig {
+                    max_message_size: 7432774432,
+                    ..Default::default()
+                })
                 .sync(sync_config)
                 .build()
                 .await
