@@ -4,7 +4,8 @@ use std::sync::{Arc, RwLock, RwLockWriteGuard};
 use anyhow::Result;
 use async_trait::async_trait;
 use iroh_gossip::proto::topic::Config as GossipConfig;
-use p2panda_core::{Extension, Hash, PrivateKey, PruneFlag, PublicKey};
+use p2panda_core::cbor::DecodeError;
+use p2panda_core::{Body, Extension, Hash, Header, PrivateKey, PruneFlag, PublicKey};
 use p2panda_discovery::mdns::LocalDiscovery;
 use p2panda_net::{FromNetwork, NetworkBuilder, SyncConfiguration};
 use p2panda_net::{ToNetwork, TopicId};
@@ -155,58 +156,46 @@ pub fn run() -> Result<(
                 });
 
                 // Decode and ingest the p2panda operations.
-                let mut stream = stream
-                    .decode()
-                    .filter_map(|result| match result {
-                        Ok(operation) => Some(operation),
-                        Err(err) => {
-                            eprintln!("decode operation error: {err}");
-                            None
+                let mut stream = stream.decode().filter_map(
+                    |result: Result<
+                        (Header<AardvarkExtensions>, Option<Body>, Vec<u8>),
+                        DecodeError,
+                    >| {
+                        match result {
+                            Ok(operation) => Some(operation),
+                            Err(err) => {
+                                eprintln!("decode operation error: {err}");
+                                None
+                            }
                         }
-                    })
-                    .ingest(operations_store_clone, 128);
+                    },
+                );
 
                 // Process the operations and forward application messages to app layer.
-                while let Some(message) = stream.next().await {
-                    match message {
-                        Ok(operation) => {
-                            let prune_flag: PruneFlag =
-                                operation.header.extract().unwrap_or_default();
-                            println!(
-                                "received operation from {}, seq_num={}, prune_flag={}",
-                                operation.header.public_key,
-                                operation.header.seq_num,
-                                prune_flag.is_set(),
-                            );
+                while let Some((header, body, _)) = stream.next().await {
+                    println!(
+                        "received operation from {}, seq_num={}",
+                        header.public_key, header.seq_num,
+                    );
 
-                            // When we discover a new author we need to add them to our "document store".
-                            {
-                                let mut write_lock = documents_store.write();
-                                write_lock
-                                    .authors
-                                    .entry(operation.header.public_key)
-                                    .and_modify(|documents| {
-                                        if !documents.contains(&document_id_clone) {
-                                            documents.push(document_id_clone.clone());
-                                        }
-                                    })
-                                    .or_insert(vec![document_id_clone.clone()]);
-                            };
+                    // When we discover a new author we need to add them to our "document store".
+                    {
+                        let mut write_lock = documents_store.write();
+                        write_lock
+                            .authors
+                            .entry(header.public_key)
+                            .and_modify(|documents| {
+                                if !documents.contains(&document_id_clone) {
+                                    documents.push(document_id_clone.clone());
+                                }
+                            })
+                            .or_insert(vec![document_id_clone.clone()]);
+                    };
 
-                            // Forward the payload up to the app.
-                            to_app
-                                .send(
-                                    operation
-                                        .body
-                                        .expect("all operations have a body")
-                                        .to_bytes(),
-                                )
-                                .await?;
-                        }
-                        Err(err) => {
-                            eprintln!("could not ingest message: {err}");
-                        }
-                    }
+                    // Forward the payload up to the app.
+                    to_app
+                        .send(body.expect("all operations have a body").to_bytes())
+                        .await?;
                 }
 
                 Ok(())
