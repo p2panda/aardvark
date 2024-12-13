@@ -12,6 +12,7 @@ dependencies = [
  "ciborium",
  "gettext-rs",
  "gtk4",
+ "iroh-gossip",
  "libadwaita",
  "p2panda-core",
  "p2panda-discovery",
