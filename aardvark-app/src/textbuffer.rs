@@ -18,12 +18,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use adw::subclass::prelude::*;
 use glib::subclass::Signal;
 use gtk::glib;
 use gtk::prelude::*;
+use gtk::subclass::prelude::*;
 use std::cell::Cell;
 use std::sync::OnceLock;
+use sourceview::*;
+use sourceview::subclass::prelude::*;
 
 mod imp {
     use super::*;
@@ -37,7 +39,7 @@ mod imp {
     impl ObjectSubclass for AardvarkTextBuffer {
         const NAME: &'static str = "AardvarkTextBuffer";
         type Type = super::AardvarkTextBuffer;
-        type ParentType = gtk::TextBuffer;
+        type ParentType = sourceview::Buffer;
     }
 
     impl ObjectImpl for AardvarkTextBuffer {
@@ -78,11 +80,14 @@ mod imp {
             self.parent_delete_range(start, end);
         }
     }
+
+    impl BufferImpl for AardvarkTextBuffer {
+    }
 }
 
 glib::wrapper! {
     pub struct AardvarkTextBuffer(ObjectSubclass<imp::AardvarkTextBuffer>)
-        @extends gtk::TextBuffer;
+        @extends gtk::TextBuffer, sourceview::Buffer;
 }
 
 impl AardvarkTextBuffer {
