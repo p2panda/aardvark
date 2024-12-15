@@ -13,7 +13,7 @@
         "--socket=fallback-x11",
         "--device=dri",
         "--socket=wayland",
-        "--env=RUST_BACKTRACE=1",
+        "--env=RUST_BACKTRACE=full",
         "--env=RUST_LOG=aardvark=debug"
     ],
     "build-options" : {
