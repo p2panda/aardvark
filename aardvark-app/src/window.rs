@@ -22,6 +22,8 @@ use adw::prelude::AdwDialogExt;
 use adw::subclass::prelude::*;
 use gtk::prelude::*;
 use gtk::{gio, glib};
+use sourceview::*;
+use sourceview::prelude::*;
 
 use crate::AardvarkTextBuffer;
 
@@ -33,7 +35,7 @@ mod imp {
     pub struct AardvarkWindow {
         // Template widgets
         #[template_child]
-        pub text_view: TemplateChild<gtk::TextView>,
+        pub text_view: TemplateChild<sourceview::View>,
         #[template_child]
         pub open_document_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -62,6 +64,12 @@ mod imp {
             self.parent_constructed();
 
             let buffer = AardvarkTextBuffer::new();
+
+            let language_manager = sourceview::LanguageManager::new();
+            let markdown = language_manager.language("markdown");
+
+            buffer.set_language(markdown.as_ref());
+
             self.text_view.set_buffer(Some(&buffer));
 
             let window = self.obj().clone();
