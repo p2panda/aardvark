@@ -23,6 +23,7 @@ use adw::subclass::prelude::*;
 use gtk::prelude::*;
 use gtk::{gio, glib};
 use sourceview::*;
+use sourceview::prelude::*;
 
 use crate::AardvarkTextBuffer;
 
@@ -63,6 +64,12 @@ mod imp {
             self.parent_constructed();
 
             let buffer = AardvarkTextBuffer::new();
+
+            let language_manager = sourceview::LanguageManager::new();
+            let markdown = language_manager.language("markdown");
+
+            buffer.set_language(markdown.as_ref());
+
             self.text_view.set_buffer(Some(&buffer));
 
             let window = self.obj().clone();
