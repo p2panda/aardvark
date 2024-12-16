@@ -26,6 +26,7 @@ use std::cell::Cell;
 use std::sync::OnceLock;
 use sourceview::*;
 use sourceview::subclass::prelude::*;
+use sourceview::prelude::BufferExt;
 
 mod imp {
     use super::*;
@@ -50,8 +51,25 @@ mod imp {
                     .param_types([i32::static_type(), i32::static_type(), str::static_type()])
                     .build()]
             })
+
+        }
+
+        fn constructed(&self) {
+            let manager = adw::StyleManager::default();
+            let buffer = self.obj();
+
+            buffer.set_style_scheme(style_scheme().as_ref());
+
+            manager.connect_dark_notify(glib::clone!(
+                #[weak]
+                buffer,
+                move |_| {
+                    buffer.set_style_scheme(style_scheme().as_ref());
+                }
+            ));
         }
     }
+
 
     impl TextBufferImpl for AardvarkTextBuffer {
         fn insert_text(&self, iter: &mut gtk::TextIter, new_text: &str) {
@@ -82,6 +100,7 @@ mod imp {
     }
 
     impl BufferImpl for AardvarkTextBuffer {
+
     }
 }
 
@@ -120,4 +139,15 @@ impl AardvarkTextBuffer {
     pub fn full_text(&self) -> String {
         self.text(&self.start_iter(), &self.end_iter(), true).into()
     }
+}
+
+fn style_scheme() -> Option<sourceview::StyleScheme> {
+    let manager = adw::StyleManager::default();
+    let scheme_name = if manager.is_dark() {
+        "Adwaita-dark"
+    } else {
+        "Adwaita"
+    };
+
+    sourceview::StyleSchemeManager::default().scheme(scheme_name)
 }
