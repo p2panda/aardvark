@@ -4,7 +4,7 @@ use std::sync::{Arc, RwLock, RwLockWriteGuard};
 use anyhow::Result;
 use async_trait::async_trait;
 use iroh_gossip::proto::Config as GossipConfig;
-use p2panda_core::{Extension, Hash, PrivateKey, PruneFlag, PublicKey};
+use p2panda_core::{Hash, PrivateKey, PublicKey};
 use p2panda_discovery::mdns::LocalDiscovery;
 use p2panda_net::{FromNetwork, NetworkBuilder, SyncConfiguration};
 use p2panda_net::{ToNetwork, TopicId};
@@ -172,55 +172,63 @@ pub fn run() -> Result<(
                 let mut stream = stream
                     .decode()
                     .filter_map(|result| match result {
-                        Ok(operation) => Some(operation),
+                        Ok(operation) => {
+                            println!("decode: {} {}", operation.0.seq_num, operation.0.public_key);
+                            Some(operation)
+                        }
                         Err(err) => {
                             eprintln!("decode operation error: {err}");
                             None
                         }
                     })
-                    .ingest(operations_store_clone, 128);
-
-                // Process the operations and forward application messages to app layer.
-                while let Some(message) = stream.next().await {
-                    match message {
+                    .ingest(operations_store_clone, 128)
+                    .filter_map(|result| match result {
                         Ok(operation) => {
-                            let prune_flag: PruneFlag =
-                                operation.header.extract().unwrap_or_default();
                             println!(
-                                "received operation from {}, seq_num={}, prune_flag={}",
-                                operation.header.public_key,
-                                operation.header.seq_num,
-                                prune_flag.is_set(),
+                                "ingest: {} {}",
+                                operation.header.seq_num, operation.header.public_key
                             );
-
-                            // When we discover a new author we need to add them to our "document store".
-                            {
-                                let mut write_lock = documents_store.write();
-                                write_lock
-                                    .authors
-                                    .entry(operation.header.public_key)
-                                    .and_modify(|documents| {
-                                        if !documents.contains(&document_id_clone) {
-                                            documents.push(document_id_clone.clone());
-                                        }
-                                    })
-                                    .or_insert(vec![document_id_clone.clone()]);
-                            };
-
-                            // Forward the payload up to the app.
-                            to_app
-                                .send(
-                                    operation
-                                        .body
-                                        .expect("all operations have a body")
-                                        .to_bytes(),
-                                )
-                                .await?;
+                            Some(operation)
                         }
                         Err(err) => {
-                            eprintln!("could not ingest message: {err}");
+                            eprintln!("ingest operation error: {err}");
+                            None
                         }
-                    }
+                    });
+
+                // Process the operations and forward application messages to app layer.
+                while let Some(operation) = stream.next().await {
+                    // let prune_flag: PruneFlag = operation.header.extract().unwrap_or_default();
+                    // println!(
+                    //     "received operation from {}, seq_num={}, prune_flag={}",
+                    //     operation.header.public_key,
+                    //     operation.header.seq_num,
+                    //     prune_flag.is_set(),
+                    // );
+
+                    // When we discover a new author we need to add them to our "document store".
+                    {
+                        let mut write_lock = documents_store.write();
+                        write_lock
+                            .authors
+                            .entry(operation.header.public_key)
+                            .and_modify(|documents| {
+                                if !documents.contains(&document_id_clone) {
+                                    documents.push(document_id_clone.clone());
+                                }
+                            })
+                            .or_insert(vec![document_id_clone.clone()]);
+                    };
+
+                    // Forward the payload up to the app.
+                    to_app
+                        .send(
+                            operation
+                                .body
+                                .expect("all operations have a body")
+                                .to_bytes(),
+                        )
+                        .await?;
                 }
 
                 Ok(())
