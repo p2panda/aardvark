@@ -21,6 +21,7 @@
 mod application;
 mod components;
 mod config;
+mod connection_popover;
 mod textbuffer;
 mod window;
 
@@ -36,6 +37,7 @@ use self::application::AardvarkApplication;
 use self::config::{GETTEXT_PACKAGE, LOCALEDIR, PKGDATADIR};
 use self::textbuffer::AardvarkTextBuffer;
 use self::window::AardvarkWindow;
+use self::connection_popover::ConnectionPopover;
 
 fn main() -> glib::ExitCode {
     setup_logging();

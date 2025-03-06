@@ -30,6 +30,7 @@ use sourceview::*;
 
 use crate::{
     AardvarkApplication, AardvarkTextBuffer,
+    ConnectionPopover,
     components::{MultilineEntry, ZoomLevelSelector},
 };
 
@@ -61,6 +62,10 @@ mod imp {
         pub copy_code_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub open_document_entry: TemplateChild<gtk::TextView>,
+        #[template_child]
+        pub connection_button: TemplateChild<gtk::MenuButton>,
+        #[template_child]
+        pub connection_button_label: TemplateChild<gtk::Label>,
         pub css_provider: gtk::CssProvider,
         pub font_size: Cell<f64>,
         #[property(get, set = Self::set_font_scale, default = 0.0)]
@@ -354,6 +359,9 @@ mod imp {
                 .downcast::<AardvarkTextBuffer>()
                 .unwrap()
                 .set_document(&document);
+            self.connection_button.set_popover(Some(&ConnectionPopover::new(&document.authors())));
+            // TODO: set the correct number of authors
+            //self.connection_button.set_tooltip_text(format!("34 People Connected"));
             self.document.replace(Some(document));
 
             self.obj().notify("document");
