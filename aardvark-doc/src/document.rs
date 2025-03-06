@@ -12,6 +12,7 @@ use p2panda_core::Hash;
 
 use crate::crdt::{TextCrdt, TextCrdtEvent, TextDelta};
 use crate::service::Service;
+use crate::authors::Authors;
 
 mod imp {
     use std::rc::Rc;
@@ -29,6 +30,8 @@ mod imp {
         ready: Cell<bool>,
         #[property(get, construct_only)]
         service: OnceCell<Service>,
+        #[property(get)]
+        authors: Authors,
     }
 
     #[glib::object_subclass]
