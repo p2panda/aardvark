@@ -196,6 +196,7 @@ mod imp {
                                 }
                             }
                         }
+                        obj.notify_text();
                     }
                 )),
             )
