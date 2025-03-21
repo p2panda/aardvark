@@ -1,3 +1,6 @@
+use crate::document::DocumentId;
+use crate::operation::{AardvarkExtensions, decode_gossip_message, encode_gossip_operation};
+use crate::store::OperationStore;
 use anyhow::Result;
 use p2panda_core::{Hash, Operation, PrivateKey};
 use p2panda_discovery::mdns::LocalDiscovery;
@@ -6,25 +9,21 @@ use p2panda_net::{FromNetwork, NetworkBuilder, SyncConfiguration, ToNetwork};
 use p2panda_stream::{DecodeExt, IngestExt};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
+use tokio_stream::wrappers::ReceiverStream;
 use tracing::error;
-
-use crate::document::Document;
-use crate::operation::{decode_gossip_message, encode_gossip_operation, AardvarkExtensions};
-use crate::store::OperationStore;
 
 #[derive(Clone, Debug)]
 pub struct Network {
     operation_store: OperationStore,
-    network: p2panda_net::Network<Document>,
+    network: p2panda_net::Network<DocumentId>,
 }
 
 impl Network {
     pub async fn spawn(
         network_id: Hash,
         private_key: PrivateKey,
-        sync_config: SyncConfiguration<Document>,
+        sync_config: SyncConfiguration<DocumentId>,
         operation_store: OperationStore,
     ) -> Result<Self> {
         let network = NetworkBuilder::new(network_id.into())
@@ -54,7 +53,7 @@ impl Network {
 
     pub async fn subscribe(
         &self,
-        document: Document,
+        document: DocumentId,
     ) -> Result<(
         mpsc::Sender<Operation<AardvarkExtensions>>,
         mpsc::Receiver<Operation<AardvarkExtensions>>,
